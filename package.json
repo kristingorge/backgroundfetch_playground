@@ -1,0 +1,38 @@
+{
+  "name": "backgroundfetch_playground",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tsc": "tsc",
+    "dev": "parcel src/index.html",
+    "build": "parcel build src/index.html",
+    "typecheck": "tsc --noEmit -p tsconfig.json -w"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kristingorge/backgroundfetch_playground.git"
+  },
+  "author": "Kristin Gorge <gorgekristin@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kristingorge/backgroundfetch_playground/issues"
+  },
+  "homepage": "https://github.com/kristingorge/backgroundfetch_playground#readme",
+  "devDependencies": {
+    "@types/jquery": "^3.5.1",
+    "parcel-bundler": "^1.12.4",
+    "tslib": "^2.0.1",
+    "typescript": "^3.9.7"
+  },
+  "dependencies": {
+    "idb": "^5.0.4",
+    "jquery": "^3.5.1",
+    "tsx-dom": "^0.8.3"
+  },
+  "browserslist": [
+    "chrome >= 74"
+  ]
+}
