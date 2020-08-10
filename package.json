@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "tsc": "tsc",
     "dev": "parcel src/index.html",
-    "build": "parcel build src/index.html",
+    "build": "parcel build src/index.html --public-url /backgroundfetch_playground/",
     "typecheck": "tsc --noEmit -p tsconfig.json -w"
   },
   "repository": {
