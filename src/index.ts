@@ -1,5 +1,6 @@
 import { log } from "./logger";
 import {addClickHandlers} from "./actions";
+import { orchestrator } from "./progress";
 
 async function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
     log('registering service worker');
@@ -28,3 +29,5 @@ registrationPromise.then((registration) => {
     serviceWorkerRegistration = registration;
     addClickHandlers();
 });
+
+orchestrator.mount();

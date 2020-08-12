@@ -1,0 +1,7 @@
+.fetch-progress {
+    border: 1px #ddd solid;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    padding: 8px 16px;
+    background: #fbfbfb;
+}
