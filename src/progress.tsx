@@ -96,11 +96,12 @@ export class FetchProgress {
     }
 
     public render(): HTMLElement {
-        const downloadedBytes = this.backgroundFetchRegistration.downloaded;
-        const readableBytes = prettyBytes(downloadedBytes);
+        const registration = this.backgroundFetchRegistration;
+        const pct = (100.0 * registration.downloaded / registration.downloadTotal).toFixed(2);
         return <div class="fetch-progress" data-fetch-id={this.backgroundFetchRegistration.id}>
             <strong>{this.backgroundFetchRegistration.id}</strong><br />
-            {readableBytes}
+            {prettyBytes(registration.downloaded)} / {prettyBytes(registration.downloadTotal)}<br />
+            {pct}%
         </div>;
     }
 }
