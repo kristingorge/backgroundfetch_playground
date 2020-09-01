@@ -99,9 +99,11 @@ export class FetchProgress {
         const registration = this.backgroundFetchRegistration;
         const pct = (100.0 * registration.downloaded / registration.downloadTotal).toFixed(2);
         return <div class="fetch-progress" data-fetch-id={this.backgroundFetchRegistration.id}>
+            {registration.result === "" ? <a href="javascript:;" class="abort-button" onClick={() => registration.abort()}>&times;</a> : null}
             <strong>{this.backgroundFetchRegistration.id}</strong><br />
             {prettyBytes(registration.downloaded)} / {prettyBytes(registration.downloadTotal)}<br />
-            {pct}%
+            {pct}%<br />
+            {registration.result}{registration.failureReason ? `, ${registration.failureReason}` : ''}
         </div>;
     }
 }
