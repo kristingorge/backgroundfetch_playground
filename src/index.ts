@@ -1,6 +1,6 @@
 import { log } from "./logger";
 import {addClickHandlers} from "./actions";
-import { orchestrator } from "./progress";
+import { orchestrator, FetchProgress } from "./progress";
 
 async function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
     log('registering service worker');
@@ -25,9 +25,15 @@ export function getBackgroundFetchManager(): any {
 }
 
 const registrationPromise = registerServiceWorker();
-registrationPromise.then((registration) => {
+registrationPromise.then(async (registration) => {
     serviceWorkerRegistration = registration;
     addClickHandlers();
+    const currentFetchIds = await getBackgroundFetchManager().getIds();
+    for (const id of currentFetchIds) {
+        const registration = await getBackgroundFetchManager().get(id);
+        orchestrator.addFetchProgress(new FetchProgress(registration));
+    }
 });
 
 orchestrator.mount();
+
