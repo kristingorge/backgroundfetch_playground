@@ -51,6 +51,7 @@ self.addEventListener('backgroundfetchsuccess', async (event: any) => {
     
             const buffer = await response.arrayBuffer();
             await storeSegment(response.url, buffer);
+            await postMessage(`Stored data for ${response.url.substring(response.url.length - 20)}`);
         }
 
         handleBackgroundFetchEvent(event);

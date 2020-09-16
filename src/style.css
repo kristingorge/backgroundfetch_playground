@@ -12,3 +12,7 @@
     padding: 5px;
     float: right;
 }
+
+#log pre {
+    word-wrap: break-word;
+}

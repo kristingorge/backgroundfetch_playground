@@ -64,7 +64,11 @@ export class DownloadStateBar {
             <strong>{this.download.itemId}</strong><br />
             {prettyBytes(this.download.backgroundFetch?.downloaded || 0)} / {prettyBytes(this.download.backgroundFetch?.downloadTotal || 0)}<br />
             {pct}%<br />
-            {this.download.status}{this.download.backgroundFetch?.failureReason ? `, ${this.download.backgroundFetch?.failureReason}` : ''}
+            {this.download.status}{this.download.backgroundFetch?.failureReason ? `, ${this.download.backgroundFetch?.failureReason}` : ''}<br />
+            <small>
+                Started At: {this.download.startedAt?.toString()}<br />
+                Completed At: {this.download.completedAt?.toString()}
+            </small>
         </div>;
     }
 }
