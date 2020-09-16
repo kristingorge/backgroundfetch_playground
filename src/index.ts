@@ -1,6 +1,9 @@
 import { log } from "./logger";
 import {addClickHandlers} from "./actions";
-import { orchestrator, FetchProgress } from "./progress";
+import { orchestrator } from "./progress";
+import { BackgroundFetchManager } from "./background_fetch";
+import { getAll } from "./db";
+import { DownloadableState } from "./downloadable_item";
 
 async function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
     log('registering service worker');
@@ -20,18 +23,19 @@ export function getServiceWorkerRegistration(): ServiceWorkerRegistration {
     return serviceWorkerRegistration!;
 }
 
-export function getBackgroundFetchManager(): any {
-    return (serviceWorkerRegistration as any).backgroundFetch;
+export function getBackgroundFetchManager(): BackgroundFetchManager {
+    return (serviceWorkerRegistration as any).backgroundFetch as BackgroundFetchManager;
 }
 
 const registrationPromise = registerServiceWorker();
 registrationPromise.then(async (registration) => {
     serviceWorkerRegistration = registration;
     addClickHandlers();
-    const currentFetchIds = await getBackgroundFetchManager().getIds();
-    for (const id of currentFetchIds) {
-        const registration = await getBackgroundFetchManager().get(id);
-        orchestrator.addFetchProgress(new FetchProgress(registration));
+
+    const items = (await getAll()) as DownloadableState[];
+
+    for (const i of items) {
+        orchestrator.addDownloadStateBar(i.downloadStateBar);
     }
 });
 

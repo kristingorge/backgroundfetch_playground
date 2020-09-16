@@ -1,59 +1,22 @@
 import prettyBytes from 'pretty-bytes';
 import { h } from "tsx-dom";
 import $ from "jquery";
-
-enum BackgroundFetchFailureReason {
-    // The background fetch has not completed yet, or was successful.
-    "",
-    // The operation was aborted by the user, or abort() was called.
-    "aborted",
-    // A response had a not-ok-status.
-    "bad-status",
-    // A fetch failed for other reasons, e.g. CORS, MIX, an invalid partial response,
-    // or a general network failure for a fetch that cannot be retried.
-    "fetch-error",
-    // Storage quota was reached during the operation.
-    "quota-exceeded",
-    // The provided downloadTotal was exceeded.
-    "download-total-exceeded"
-};
-
-enum BackgroundFetchResult { "", "success", "failure" };
-
-interface BackgroundFetchRecord {
-    request: Request;
-    responseReady: Promise<Response>;
-};
-
-// from https://wicg.github.io/background-fetch/#background-fetch-registration
-interface BackgroundFetchRegistration extends EventTarget {
-    id: string;
-    uploadTotal: number;
-    uploaded: number;
-    downloadTotal: number;
-    downloaded: number;
-    result: BackgroundFetchResult;
-    failureReason: BackgroundFetchFailureReason;
-    recordsAvailable: boolean;
-
-    abort(): Promise<boolean>;
-    match(request: RequestInfo, options?: CacheQueryOptions): Promise<BackgroundFetchRecord>;
-    matchAll(request: RequestInfo, options?: CacheQueryOptions): Promise<Array<BackgroundFetchRecord>>;
-}
+import { DownloadableState } from './downloadable_item';
+import { ItemStatus } from './item_status';
 
 class FetchDisplayOrchestrator {
-    private fetchProgressItems: FetchProgress[] = [];
+    private downloadStateBars: DownloadStateBar[] = [];
 
     constructor(private $container: JQuery) { }
 
-    public addFetchProgress(fetch: FetchProgress) {
-        this.fetchProgressItems.push(fetch);
+    public addDownloadStateBar(fetch: DownloadStateBar) {
+        this.downloadStateBars.push(fetch);
         this.requestRender(fetch);
     }
 
     public render() {
         return <div id="all-fetch-progresses-container">
-            {this.fetchProgressItems.map(fetch => this.renderSingle(fetch))}
+            {this.downloadStateBars.map(fetch => this.renderSingle(fetch))}
         </div>;
     }
 
@@ -61,20 +24,20 @@ class FetchDisplayOrchestrator {
         this.$container.append(this.render());
     }
 
-    renderSingle(fetch: FetchProgress) {
+    renderSingle(fetch: DownloadStateBar) {
         return <div class="fetch-progress-container"
-            data-fetch-progress-container-id={fetch.backgroundFetchRegistration.id}>
+            data-fetch-progress-container-id={fetch.id}>
             {fetch.render()}
         </div>;
     }
 
-    public requestRender(fetch: FetchProgress) {
-        if (this.fetchProgressItems.indexOf(fetch) === -1) {
-            throw new Error('what is this?');
+    public requestRender(fetch: DownloadStateBar) {
+        if (this.downloadStateBars.indexOf(fetch) === -1) {
+            return;
         }
 
         const $fetchContainer = this.$container
-            .find(`div[data-fetch-progress-container-id=${fetch.backgroundFetchRegistration.id}]`);
+            .find(`div[data-fetch-progress-container-id=${fetch.id}]`);
 
         if ($fetchContainer.length > 0) {
             $fetchContainer.eq(0).children().eq(0).replaceWith(fetch.render());
@@ -85,25 +48,23 @@ class FetchDisplayOrchestrator {
     }
 }
 
-export class FetchProgress {
-    constructor(public readonly backgroundFetchRegistration: BackgroundFetchRegistration) {
-        // Set up listeners.
-        backgroundFetchRegistration.addEventListener('progress', this.progressHandler);
-    }
+export class DownloadStateBar {
+    constructor(public readonly download: DownloadableState) { }
 
-    private progressHandler = () => {
-        orchestrator.requestRender(this);
+    get id() {
+        return this.download.itemId;
     }
 
     public render(): HTMLElement {
-        const registration = this.backgroundFetchRegistration;
-        const pct = (100.0 * registration.downloaded / registration.downloadTotal).toFixed(2);
-        return <div class="fetch-progress" data-fetch-id={this.backgroundFetchRegistration.id}>
-            {registration.result === "" ? <a href="javascript:;" class="abort-button" onClick={() => registration.abort()}>&times;</a> : null}
-            <strong>{this.backgroundFetchRegistration.id}</strong><br />
-            {prettyBytes(registration.downloaded)} / {prettyBytes(registration.downloadTotal)}<br />
+        const pct = (100.0 * this.download.downloadedPct).toFixed(2);
+        return <div class="fetch-progress" data-item-id={this.download.itemId}>
+            {this.download.status === ItemStatus.DOWNLOADING
+                ? <a href="javascript:;" class="abort-button" onClick={() => this.download.fetchRegistration!.abort()}>&times;</a>
+                : null}
+            <strong>{this.download.itemId}</strong><br />
+            {prettyBytes(this.download.backgroundFetch?.downloaded || 0)} / {prettyBytes(this.download.backgroundFetch?.downloadTotal || 0)}<br />
             {pct}%<br />
-            {registration.result}{registration.failureReason ? `, ${registration.failureReason}` : ''}
+            {this.download.status}{this.download.backgroundFetch?.failureReason ? `, ${this.download.backgroundFetch?.failureReason}` : ''}
         </div>;
     }
 }

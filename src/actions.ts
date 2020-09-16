@@ -1,39 +1,24 @@
 import $ from "jquery";
 import { getBackgroundFetchManager } from ".";
 import { log } from "./logger";
-import { orchestrator, FetchProgress } from "./progress";
+import { orchestrator } from "./progress";
+import { DownloadableState } from "./downloadable_item";
+import * as SampleDownloads from "./sample_downloadable_items";
 
-// Triggering different background fetch scenarios for testing purposes.
-// Test video files are from https://bitmovin.com/demos/stream-test
-
-let videoSegments: string[] = [];
-for(let i = 0; i < 50; i++) {
-    videoSegments.push(
-        `https://bitmovin-a.akamaihd.net/content/MI201109210084_1/video/720_2400000/dash/segment_${i}.m4s`);
-}
 
 export function addClickHandlers() {
     $("#action-single").click(async (e) => {
-        // TODO: could add BackgroundFetchOptions to provide downloadTotal bytes.
-        let bgfRegistration = await getBackgroundFetchManager().fetch(
-            'single',
-            'https://bitmovin-a.akamaihd.net/content/MI201109210084_1/video/720_2400000/dash/segment_0.m4s',
-            { downloadTotal: 1434989 }
-        );
-        log('Started single fetch');
+        const dl = new DownloadableState(SampleDownloads.SINGLE);
+        await dl.startDownload();
 
-        orchestrator.addFetchProgress(new FetchProgress(bgfRegistration));
+        orchestrator.addDownloadStateBar(dl.downloadStateBar);
     });
 
     // Fetches 50 ~1.5 MB video segments.
     $("#action-multiple").click(async (e) => {
-        let bgfRegistration = await getBackgroundFetchManager().fetch(
-            'multiple',
-            videoSegments,
-            { downloadTotal: 61626553 }
-        );
-        log('Started multi-request fetch');
+        const dl = new DownloadableState(SampleDownloads.MULTI);
+        await dl.startDownload();
 
-        orchestrator.addFetchProgress(new FetchProgress(bgfRegistration));
+        orchestrator.addDownloadStateBar(dl.downloadStateBar);
     });
 }

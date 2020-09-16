@@ -1,4 +1,5 @@
 import { } from ".";
+import { storeSegment } from "./db_schema";
 
 declare var self: ServiceWorkerGlobalScope;
 
@@ -20,8 +21,8 @@ async function postMessage(msg: any) {
     }
 }
 
-function handleBackgroundFetchEvent(event: any) {
-    postMessage({
+async function handleBackgroundFetchEvent(event: any) {
+    await postMessage({
         eventType: event.type,
         id: event.registration.id,
         downloaded: event.registration.downloaded,
@@ -33,17 +34,35 @@ function handleBackgroundFetchEvent(event: any) {
 }
 
 self.addEventListener('backgroundfetchclick', (event: any) => {
-    handleBackgroundFetchEvent(event);
+    event.waitUntil(handleBackgroundFetchEvent(event));
 });
 
 self.addEventListener('backgroundfetchsuccess', async (event: any) => {
-    handleBackgroundFetchEvent(event);
+    const process = async () => {
+        const records = await event.registration.matchAll();
+        for (const record of records) {
+            let response = record.responseReady;
+            try {
+                response = await response;
+            } catch (e) {
+                console.error('No response for ' + record.request.url + ': ' + e.message);
+                return Promise.resolve(null);
+            }
+    
+            const buffer = await response.arrayBuffer();
+            await storeSegment(response.url, buffer);
+        }
+
+        handleBackgroundFetchEvent(event);
+    };
+
+    event.waitUntil(process());
 });
 
 self.addEventListener('backgroundfetchfail', async (event: any) => {
-    handleBackgroundFetchEvent(event);
+    event.waitUntil(handleBackgroundFetchEvent(event));
 });
 
 self.addEventListener('backgroundfetchabort', async (event: any) => {
-    handleBackgroundFetchEvent(event);
+    event.waitUntil(handleBackgroundFetchEvent(event));
 });
