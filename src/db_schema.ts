@@ -31,27 +31,26 @@ export interface TestDB extends idb.DBSchema {
 
 const DB_NAME = 'db';
 
-let _db: idb.IDBPDatabase<TestDB> | null = null;
 export async function openDb() {
-    if (_db == null) {
-        _db = await idb.openDB(DB_NAME, 1, {
-            upgrade(db) {
-                const itemStore = db.createObjectStore('items');
+    return await idb.openDB(DB_NAME, 1, {
+        upgrade(db) {
+            const itemStore = db.createObjectStore('items');
 
-                itemStore.createIndex('by-fetch-id', 'fetchId');
+            itemStore.createIndex('by-fetch-id', 'fetchId');
 
-                db.createObjectStore('segments');
-            }
-        });
-    }
-
-    return _db;
+            db.createObjectStore('segments');
+        }
+    });;
 }
 
 export async function store(obj: IDbStorable) {
-    await (await openDb()).put('items', obj.toStorageDocument(), obj.idbStorageKey());
+    const db = await openDb();
+    await db.put('items', obj.toStorageDocument(), obj.idbStorageKey());
+    db.close();
 }
 
 export async function storeSegment(url: string, data: ArrayBuffer) {
-    await (await openDb()).put('segments', data, url);
+    const db = await openDb();
+    await db.put('segments', data, url);
+    db.close();
 }

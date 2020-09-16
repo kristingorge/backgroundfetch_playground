@@ -6,7 +6,9 @@ import { openDb, IDbStorable, DownloadableStateDocument } from './db_schema';
 
 
 export async function get(itemId: DownloadableItemId): Promise<IDbStorable|null> {
-    const doc = await (await openDb()).get('items', itemId);
+    const db = await openDb();
+    const doc = await db.get('items', itemId);
+    db.close();
 
     if (!doc) {
         return null;
@@ -27,6 +29,7 @@ async function stateFromDoc(storageKey: string, doc: DownloadableStateDocument) 
 export async function getAll(): Promise<IDbStorable[]> {
     const db = await openDb();
     const docs = await db.getAll('items');
+    db.close();
 
     return Promise.all(docs.map(d => stateFromDoc(d.itemId, d)));
 }
