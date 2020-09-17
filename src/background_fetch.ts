@@ -55,5 +55,5 @@ export interface BackgroundFetchRegistration extends EventTarget {
 
     abort(): Promise<boolean>;
     match(request: RequestInfo, options?: CacheQueryOptions): Promise<BackgroundFetchRecord>;
-    matchAll(request: RequestInfo, options?: CacheQueryOptions): Promise<Array<BackgroundFetchRecord>>;
+    matchAll(request?: RequestInfo, options?: CacheQueryOptions): Promise<Array<BackgroundFetchRecord>>;
 }

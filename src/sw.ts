@@ -1,5 +1,8 @@
 import { } from ".";
-import { storeSegment } from "./db_schema";
+import * as db from "./db";
+import { BackgroundFetchRegistration } from "./background_fetch";
+import { DownloadableState } from "./downloadable_item";
+import { setServiceWorkerRegistration, getServiceWorkerRegistration } from "./background_fetch_manager";
 
 declare var self: ServiceWorkerGlobalScope;
 
@@ -11,7 +14,9 @@ self.addEventListener("install", (event: ExtendableEvent) => {
 
 // Claim ownership over the parent page without waiting for a new navigation event. This reduces having to reload
 // during development.
-self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+self.addEventListener('activate', event => {
+    event.waitUntil(self.clients.claim());
+});
 
 // Post message to all open tabs associated with this ServiceWorker.
 async function postMessage(msg: any) {
@@ -38,22 +43,34 @@ self.addEventListener('backgroundfetchclick', (event: any) => {
 });
 
 self.addEventListener('backgroundfetchsuccess', async (event: any) => {
+    const registration = event.registration as BackgroundFetchRegistration;
+
+    if (!getServiceWorkerRegistration()) {
+        setServiceWorkerRegistration(self.registration);
+    }
+
     const process = async () => {
-        const records = await event.registration.matchAll();
-        for (const record of records) {
-            let response = record.responseReady;
+        const records = await registration.matchAll();
+        
+        await Promise.all(records.map(async record => {
             try {
-                response = await response;
+                const response = await record.responseReady;
+                const buffer = await response.arrayBuffer();
+
+                console.log(`Storing segment: ${response.url}`);
+                await db.storeSegment(response.url, buffer);
+                await postMessage(`Stored data for ${response.url.substring(response.url.length - 20)}`);    
             } catch (e) {
                 console.error('No response for ' + record.request.url + ': ' + e.message);
                 return Promise.resolve(null);
             }
-    
-            const buffer = await response.arrayBuffer();
-            await storeSegment(response.url, buffer);
-            await postMessage(`Stored data for ${response.url.substring(response.url.length - 20)}`);
-        }
+        }));
 
+        console.log(`updating download state to complete`);
+        const dl = (await db.get(registration.id)) as DownloadableState;
+        dl.updateFromRegistration(registration);
+
+        console.log(`sending background fetch success event`);
         handleBackgroundFetchEvent(event);
     };
 

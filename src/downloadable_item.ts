@@ -1,10 +1,8 @@
-import { orchestrator, DownloadStateBar } from "./progress";
-import { store } from "./db_schema";
-import { BackgroundFetchRegistration, BackgroundFetchFailureReason, BackgroundFetchResult } from "./background_fetch";
+import { BackgroundFetchRegistration, BackgroundFetchResult } from "./background_fetch";
 import { ITEMS } from "./sample_downloadable_items";
-import { getBackgroundFetchManager } from ".";
-import { IDbStorable, DownloadableStateDocument } from "./db_schema";
+import { store, IDbStorable, DownloadableStateDocument } from "./db";
 import { ItemStatus } from "./item_status";
+import { getBackgroundFetchManager } from "./background_fetch_manager";
 
 export type DownloadableItemId = string;
 
@@ -15,15 +13,14 @@ export interface DownloadableItem {
 }
 
 
-export class DownloadableState implements IDbStorable {
+export class DownloadableState extends EventTarget implements IDbStorable {
     itemId!: DownloadableItemId;
     status!: ItemStatus;
     startedAt!: Date|null;
     completedAt!: Date|null;
     fetchRegistration!: BackgroundFetchRegistration|null;
     backgroundFetch!: Pick<BackgroundFetchRegistration, "result" | "failureReason" | "downloaded" | "downloadTotal">|null;
-    downloadStateBar!: DownloadStateBar;
-    
+
     get downloadedPct(): number {
         if (!this.backgroundFetch) {
             return 0;
@@ -36,6 +33,8 @@ export class DownloadableState implements IDbStorable {
     }
 
     constructor(item?: DownloadableItem) {
+        super();
+
         if (!item) {
             return;
         }
@@ -46,7 +45,6 @@ export class DownloadableState implements IDbStorable {
         this.completedAt = null;
         this.fetchRegistration = null;
         this.backgroundFetch = null;
-        this.downloadStateBar = new DownloadStateBar(this);
     }
 
     async startDownload() {
@@ -80,31 +78,33 @@ export class DownloadableState implements IDbStorable {
     }
 
     private addFetchListeners(fetchRegistration: BackgroundFetchRegistration) {
-        fetchRegistration.addEventListener('progress', () => {
-            if (fetchRegistration.result == BackgroundFetchResult.InProgress) {
-                this.status = ItemStatus.DOWNLOADING;
-            }
-            else if (fetchRegistration.result == BackgroundFetchResult.Success) {
-                this.status = ItemStatus.DOWNLOADED;
+        fetchRegistration.addEventListener('progress', (e: Event) => this.updateFromRegistration(fetchRegistration));
+    }
 
-                if (!this.completedAt) {
-                    this.completedAt = new Date();
-                }
-            }
-            else if (fetchRegistration.result == BackgroundFetchResult.Failure) {
-                this.status = ItemStatus.FAILED;
-            }
+    updateFromRegistration(fetchRegistration: BackgroundFetchRegistration) {
+        if (fetchRegistration.result == BackgroundFetchResult.InProgress) {
+            this.status = ItemStatus.DOWNLOADING;
+        }
+        else if (fetchRegistration.result == BackgroundFetchResult.Success) {
+            this.status = ItemStatus.DOWNLOADED;
 
-            this.backgroundFetch = {
-                downloadTotal: fetchRegistration.downloadTotal,
-                downloaded: fetchRegistration.downloaded,
-                result: fetchRegistration.result,
-                failureReason: fetchRegistration.failureReason,
-            };
-            orchestrator.requestRender(this.downloadStateBar);
+            if (!this.completedAt) {
+                this.completedAt = new Date();
+            }
+        }
+        else if (fetchRegistration.result == BackgroundFetchResult.Failure) {
+            this.status = ItemStatus.FAILED;
+        }
 
-            store(this);
-        });
+        this.backgroundFetch = {
+            downloadTotal: fetchRegistration.downloadTotal,
+            downloaded: fetchRegistration.downloaded,
+            result: fetchRegistration.result,
+            failureReason: fetchRegistration.failureReason,
+        };
+        this.dispatchEvent(new Event('requestrender'));
+
+        store(this);
     }
 
     fromStorageDocument(_storageKey: string, dbState: DownloadableStateDocument, fetchRegistration: BackgroundFetchRegistration|null) {
@@ -115,13 +115,11 @@ export class DownloadableState implements IDbStorable {
         this.fetchRegistration = fetchRegistration;
         this.backgroundFetch = dbState.backgroundFetch;
 
-        this.downloadStateBar = new DownloadStateBar(this);
-
         if (fetchRegistration) {
             this.addFetchListeners(fetchRegistration);
         }
 
-        orchestrator.requestRender(this.downloadStateBar);
+        this.dispatchEvent(new Event('requestrender'));
     }
 
     idbStorageKey() {

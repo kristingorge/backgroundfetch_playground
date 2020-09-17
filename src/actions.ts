@@ -1,9 +1,8 @@
 import $ from "jquery";
-import { getBackgroundFetchManager } from ".";
-import { log } from "./logger";
 import { orchestrator } from "./progress";
 import { DownloadableState } from "./downloadable_item";
 import * as SampleDownloads from "./sample_downloadable_items";
+import { MANAGER } from "./download_manager";
 
 
 export function addClickHandlers() {
@@ -11,7 +10,7 @@ export function addClickHandlers() {
         const dl = new DownloadableState(SampleDownloads.SINGLE);
         await dl.startDownload();
 
-        orchestrator.addDownloadStateBar(dl.downloadStateBar);
+        MANAGER.addDownload(dl);
     });
 
     // Fetches 50 ~1.5 MB video segments.
@@ -19,6 +18,6 @@ export function addClickHandlers() {
         const dl = new DownloadableState(SampleDownloads.MULTI);
         await dl.startDownload();
 
-        orchestrator.addDownloadStateBar(dl.downloadStateBar);
+        MANAGER.addDownload(dl);
     });
 }
