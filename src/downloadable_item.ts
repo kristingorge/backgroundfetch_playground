@@ -1,6 +1,7 @@
 import { BackgroundFetchRegistration, BackgroundFetchResult } from "./background_fetch";
 import { ITEMS } from "./sample_downloadable_items";
 import { store, IDbStorable, DownloadableStateDocument } from "./db";
+import { log } from "./logger";
 import { ItemStatus } from "./item_status";
 import { getBackgroundFetchManager } from "./background_fetch_manager";
 
@@ -48,6 +49,11 @@ export class DownloadableState extends EventTarget implements IDbStorable {
     }
 
     async startDownload() {
+        if (!('BackgroundFetchManager' in self)) {
+            log('browser does not support background fetch :(');
+            return;
+        }
+
         this.startedAt = new Date();
         const reg = await getBackgroundFetchManager().fetch(this.item.id, this.item.segments, {
             downloadTotal: this.item.totalSize,
